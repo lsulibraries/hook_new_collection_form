@@ -1,0 +1,6 @@
+name = islandora_new_collection_form_hook
+description = alter the form for new collections to apply user namespace restrictions
+dependencies[] = islandora
+package = Islandora Utilities
+core = 7.x
+version = 7.x-dev

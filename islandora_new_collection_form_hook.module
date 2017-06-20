@@ -1,0 +1,72 @@
+<?php
+
+
+
+//this function is doing what this hook needs to do...
+
+/**
+ * Define child collection form.
+ *
+ * @param array $form
+ *   The Drupal form definition.
+ * @param array $form_state
+ *   The Drupal form state.
+ *
+ * @return array
+ *   The Drupal form definition.
+ */
+function islandora_basic_collection_create_child_collection_form(array $form, array &$form_state) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $parent_object = islandora_object_load($form_state['islandora']['shared_storage']['parent']);
+  // Permissions handling.
+  if (!user_access(ISLANDORA_BASIC_COLLECTION_CREATE_CHILD_COLLECTION)) {
+    drupal_set_message(t('You do not have permissions to create collections.'), 'error');
+    drupal_goto('islandora/object/' . $parent_object->id);
+  }
+  $policy = new CollectionPolicy($parent_object['COLLECTION_POLICY']->content);
+  $policy_content_models = $policy->getContentModels();
+  $content_models = islandora_get_content_models();
+  $form_state['content_models'] = $content_models;
+  $user = user_uid_optional_load();
+  $user_namespace = $user->field_namespace;
+  if(empty($user_namespace)){
+  $default_namespace = islandora_get_namespace($policy_content_models['islandora:collectionCModel']['namespace']);
+  }
+  else{
+  $default_namespace = $user_namespace['und'][0]['value'];
+  }
+  dpm($default_namespace);
+  return array(
+    '#action' => request_uri() . '#create-child-collection',
+    'pid' => array(
+      '#type' => 'textfield',
+      '#default_value' => $default_namespace . '-',
+      '#title' => t('Collection PID'),
+      '#description' => t("Unique PID for this collection. <br/>Your instition's PIDs take the general form of <strong>$default_namespace-collection_alias:collection</strong> (e.g., lsu-hueyplong:collection)<br/>all namespaces should start with your institutional prefix, your prefix is currently set to:$default_namespace.<br/>For now, add your collection alias to the field above, without deleting any aspect of your institutional prefix. "),
+      '#size' => 15,
+    ),
+    'inherit_policy' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Inherit collection policy?'),
+      '#default_value' => TRUE,
+    ),
+    'policy' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Collection Policy'),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="inherit_policy"]' => array('checked' => FALSE),
+        ),
+      ),
+      'namespace' => islandora_basic_collection_get_namespace_form_element($default_namespace),
+      'content_models' => array(
+        '#title' => "Allowable content models",
+        '#type' => 'checkboxes',
+        '#options' => islandora_basic_collection_get_content_models_as_form_options($content_models),
+        '#description' => t("Content models describe the behaviours of objects with which they are associated."),
+      ),
+    ),
+  );
+}
+
+?>
